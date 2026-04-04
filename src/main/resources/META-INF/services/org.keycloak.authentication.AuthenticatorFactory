@@ -1,0 +1,2 @@
+com.lowtouch.keycloak.auth.whatsapp.WhatsAppAuthenticatorFormFactory
+com.lowtouch.keycloak.auth.whatsapp.ConditionalWhatsAppAuthenticatorFormFactory
