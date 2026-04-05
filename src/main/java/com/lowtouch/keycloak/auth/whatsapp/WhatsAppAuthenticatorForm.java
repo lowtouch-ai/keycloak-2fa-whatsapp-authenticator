@@ -74,6 +74,19 @@ public class WhatsAppAuthenticatorForm extends AbstractUsernameFormAuthenticator
             phoneAttribute = cfg.getOrDefault(WhatsAppConstants.PHONE_ATTRIBUTE, WhatsAppConstants.DEFAULT_PHONE_ATTRIBUTE);
         }
 
+        // Fall back to environment variables if not configured via Admin Console
+        if (accountSid == null) accountSid = System.getenv("KC_TWILIO_ACCOUNT_SID");
+        if (authToken == null) authToken = System.getenv("KC_TWILIO_AUTH_TOKEN");
+        if (fromNumber == null) fromNumber = System.getenv("KC_TWILIO_FROM_NUMBER");
+        if (phoneAttribute == null || phoneAttribute.equals(WhatsAppConstants.DEFAULT_PHONE_ATTRIBUTE)) {
+            String envAttr = System.getenv("KC_TWILIO_PHONE_ATTRIBUTE");
+            if (envAttr != null) phoneAttribute = envAttr;
+        }
+        String envLength = System.getenv("KC_TWILIO_CODE_LENGTH");
+        if (envLength != null && config == null) length = Integer.parseInt(envLength);
+        String envTtl = System.getenv("KC_TWILIO_CODE_TTL");
+        if (envTtl != null && config == null) ttl = Integer.parseInt(envTtl);
+
         String code = SecretGenerator.getInstance().randomString(length, SecretGenerator.DIGITS);
         sendWhatsAppCode(context.getUser(), code, ttl, accountSid, authToken, fromNumber, phoneAttribute);
 
