@@ -6,85 +6,69 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
 @JBossLog
 public class WhatsAppService {
 
-    private final String apiToken;
-    private final String phoneNumberId;
-    private final String templateName;
+    private final String accountSid;
+    private final String authToken;
+    private final String fromNumber;
 
-    public WhatsAppService(String apiToken, String phoneNumberId, String templateName) {
-        this.apiToken = apiToken;
-        this.phoneNumberId = phoneNumberId;
-        this.templateName = templateName;
+    public WhatsAppService(String accountSid, String authToken, String fromNumber) {
+        this.accountSid = accountSid;
+        this.authToken = authToken;
+        this.fromNumber = fromNumber;
     }
 
     /**
-     * Sends a WhatsApp OTP message using Meta Cloud API template messaging.
-     * The template must be approved in Meta Business Manager with one body parameter: the OTP code.
+     * Sends a WhatsApp OTP message via Twilio Messaging API.
      *
      * @param toPhone phone number in E.164 format, e.g. +14155551234
      * @param code    the OTP code to send
-     * @param ttl     validity in seconds (included in template if it supports two parameters)
+     * @param ttl     validity in seconds, included in the message body
      */
     public void sendOtp(String toPhone, String code, int ttl) throws IOException {
-        String endpoint = WhatsAppConstants.GRAPH_API_URL + "/" + phoneNumberId + "/messages";
+        String endpoint = WhatsAppConstants.TWILIO_API_URL + "/" + accountSid + "/Messages.json";
 
-        // Normalize phone: remove leading '+' as Meta API expects digits only
-        String normalizedPhone = toPhone.startsWith("+") ? toPhone.substring(1) : toPhone;
+        String to = "whatsapp:" + toPhone;
+        String from = fromNumber.startsWith("whatsapp:") ? fromNumber : "whatsapp:" + fromNumber;
+        String messageBody = "Your lowtouch.ai verification code is *" + code + "*. "
+                + "Valid for " + ttl + " seconds. Do not share this code with anyone.";
 
-        String body = buildTemplatePayload(normalizedPhone, code, ttl);
+        String formData = "To=" + URLEncoder.encode(to, StandardCharsets.UTF_8)
+                + "&From=" + URLEncoder.encode(from, StandardCharsets.UTF_8)
+                + "&Body=" + URLEncoder.encode(messageBody, StandardCharsets.UTF_8);
 
-        log.debugf("Sending WhatsApp OTP to %s via template '%s'", normalizedPhone, templateName);
+        String credentials = Base64.getEncoder()
+                .encodeToString((accountSid + ":" + authToken).getBytes(StandardCharsets.UTF_8));
+
+        log.debugf("Sending WhatsApp OTP via Twilio to %s", toPhone);
 
         HttpURLConnection conn = (HttpURLConnection) new URL(endpoint).openConnection();
         try {
             conn.setRequestMethod("POST");
-            conn.setRequestProperty("Authorization", "Bearer " + apiToken);
-            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setRequestProperty("Authorization", "Basic " + credentials);
+            conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
             conn.setDoOutput(true);
             conn.setConnectTimeout(10_000);
             conn.setReadTimeout(10_000);
 
             try (OutputStream os = conn.getOutputStream()) {
-                os.write(body.getBytes(StandardCharsets.UTF_8));
+                os.write(formData.getBytes(StandardCharsets.UTF_8));
             }
 
             int status = conn.getResponseCode();
             if (status < 200 || status >= 300) {
-                log.errorf("WhatsApp API returned HTTP %d for phone %s", status, normalizedPhone);
-                throw new IOException("WhatsApp API error: HTTP " + status);
+                log.errorf("Twilio API returned HTTP %d for phone %s", status, toPhone);
+                throw new IOException("Twilio API error: HTTP " + status);
             }
 
-            log.infof("WhatsApp OTP sent successfully to %s", normalizedPhone);
+            log.infof("WhatsApp OTP sent successfully via Twilio to %s", toPhone);
         } finally {
             conn.disconnect();
         }
-    }
-
-    /**
-     * Builds a Meta Cloud API template message payload.
-     * Supports both single-parameter templates (code only) and
-     * dual-parameter templates (code + ttl).
-     */
-    private String buildTemplatePayload(String phone, String code, int ttl) {
-        return "{"
-                + "\"messaging_product\":\"whatsapp\","
-                + "\"to\":\"" + phone + "\","
-                + "\"type\":\"template\","
-                + "\"template\":{"
-                + "  \"name\":\"" + templateName + "\","
-                + "  \"language\":{\"code\":\"en_US\"},"
-                + "  \"components\":[{"
-                + "    \"type\":\"body\","
-                + "    \"parameters\":["
-                + "      {\"type\":\"text\",\"text\":\"" + code + "\"},"
-                + "      {\"type\":\"text\",\"text\":\"" + ttl + "\"}"
-                + "    ]"
-                + "  }]"
-                + "}"
-                + "}";
     }
 }

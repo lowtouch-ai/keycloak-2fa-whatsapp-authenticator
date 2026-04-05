@@ -48,21 +48,22 @@ public class WhatsAppAuthenticatorFormFactory implements AuthenticatorFactory {
 
     @Override
     public String getHelpText() {
-        return "Sends a one-time password to the user via WhatsApp (Meta Cloud API).";
+        return "Sends a one-time password to the user via WhatsApp using Twilio.";
     }
 
     @Override
     public List<ProviderConfigProperty> getConfigProperties() {
         return List.of(
-                new ProviderConfigProperty(WhatsAppConstants.API_TOKEN, "WhatsApp API Token",
-                        "Meta Cloud API access token (from Meta for Developers > WhatsApp > API Setup).",
-                        ProviderConfigProperty.PASSWORD, ""),
-                new ProviderConfigProperty(WhatsAppConstants.PHONE_NUMBER_ID, "Phone Number ID",
-                        "The WhatsApp Phone Number ID from Meta Business Manager.",
+                new ProviderConfigProperty(WhatsAppConstants.ACCOUNT_SID, "Twilio Account SID",
+                        "Your Twilio Account SID from console.twilio.com.",
                         ProviderConfigProperty.STRING_TYPE, ""),
-                new ProviderConfigProperty(WhatsAppConstants.TEMPLATE_NAME, "Message Template Name",
-                        "Approved WhatsApp message template name. Must have two body parameters: {{1}} = OTP code, {{2}} = TTL seconds.",
-                        ProviderConfigProperty.STRING_TYPE, WhatsAppConstants.DEFAULT_TEMPLATE_NAME),
+                new ProviderConfigProperty(WhatsAppConstants.AUTH_TOKEN, "Twilio Auth Token",
+                        "Your Twilio Auth Token from console.twilio.com.",
+                        ProviderConfigProperty.PASSWORD, ""),
+                new ProviderConfigProperty(WhatsAppConstants.FROM_NUMBER, "From WhatsApp Number",
+                        "Your Twilio WhatsApp-enabled number in E.164 format (e.g. +14155238886). " +
+                        "Use the sandbox number for testing.",
+                        ProviderConfigProperty.STRING_TYPE, ""),
                 new ProviderConfigProperty(WhatsAppConstants.PHONE_ATTRIBUTE, "User Phone Attribute",
                         "Keycloak user attribute that holds the phone number in E.164 format (e.g. +14155551234).",
                         ProviderConfigProperty.STRING_TYPE, WhatsAppConstants.DEFAULT_PHONE_ATTRIBUTE),

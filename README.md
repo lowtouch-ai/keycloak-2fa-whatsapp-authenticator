@@ -1,16 +1,26 @@
 # Keycloak 2FA WhatsApp Authenticator
 
-Keycloak Authentication Provider that sends a two-factor OTP (One-Time Password) via WhatsApp using the Meta Cloud API.
+Keycloak Authentication Provider that sends a two-factor OTP (One-Time Password) via WhatsApp using **Twilio**.
 
 Mirrors the structure of [keycloak-2fa-email-authenticator](https://github.com/lowtouch-ai/keycloak-2fa-email-authenticator). Tested with Keycloak 26.1.x.
 
 ## Prerequisites
 
-- A **Meta (Facebook) Developer** account with a WhatsApp Business App
-- An approved **WhatsApp message template** with two body parameters:
-  - `{{1}}` — the OTP code
-  - `{{2}}` — TTL in seconds
+- A **Twilio** account with WhatsApp messaging enabled
 - Users must have a `phoneNumber` attribute in Keycloak with an **E.164** formatted number (e.g. `+14155551234`)
+
+## Twilio Setup
+
+### Sandbox (Testing)
+1. Sign up at [twilio.com](https://twilio.com)
+2. Go to **Messaging → Try it out → Send a WhatsApp message**
+3. Have users text `join <sandbox-word>` to `+14155238886` to opt in
+4. Use `+14155238886` as the From number
+
+### Production
+1. Go to **Messaging → Senders → WhatsApp Senders**
+2. Request and verify a WhatsApp Business number
+3. Use your verified number as the From number (no template required for session messages)
 
 ## Build
 
@@ -30,23 +40,24 @@ After adding the authenticator to your authentication flow, configure:
 
 | Property | Description |
 |----------|-------------|
-| **WhatsApp API Token** | Meta Cloud API access token |
-| **Phone Number ID** | WhatsApp Phone Number ID from Meta Business Manager |
-| **Message Template Name** | Approved template name (default: `otp_authentication`) |
+| **Twilio Account SID** | From [console.twilio.com](https://console.twilio.com) dashboard |
+| **Twilio Auth Token** | From [console.twilio.com](https://console.twilio.com) dashboard |
+| **From WhatsApp Number** | Your Twilio WhatsApp number in E.164 (e.g. `+14155238886`) |
 | **User Phone Attribute** | Keycloak user attribute for the phone number (default: `phoneNumber`) |
 | **Code length** | Digits in the OTP (default: 6) |
 | **Time-to-live** | OTP validity in seconds (default: 300) |
 
 ## Authentication Flow Setup
 
-1. Go to **Authentication** → **Flows** → **Browser**
+1. Go to **Authentication** → **Flows** → **Browser** → **Copy**
 2. Add **WhatsApp OTP** (or **Conditional WhatsApp OTP**) after Username Password Form
-3. Configure the execution with your Meta API credentials
+3. Set execution to **Required**
+4. Click the gear icon and fill in your Twilio credentials
 
 ## Conditional Authenticator
 
-**Conditional WhatsApp OTP** supports all the same bypass rules as the email variant:
+**Conditional WhatsApp OTP** supports bypass rules identical to the email variant:
 - Skip/force by **user attribute** (`otpControlAttribute`)
 - Skip/force by **user role** (`skipOtpRole` / `forceOtpRole`)
-- Skip/force by **HTTP header pattern** (useful for trusted IPs via `X-Forwarded-Host`)
+- Skip/force by **HTTP header pattern**
 - Default fallback: `skip` or `force`

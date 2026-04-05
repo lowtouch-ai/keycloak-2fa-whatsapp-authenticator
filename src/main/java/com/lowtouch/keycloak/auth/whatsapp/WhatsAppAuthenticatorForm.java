@@ -59,23 +59,23 @@ public class WhatsAppAuthenticatorForm extends AbstractUsernameFormAuthenticator
 
         int length = WhatsAppConstants.DEFAULT_LENGTH;
         int ttl = WhatsAppConstants.DEFAULT_TTL;
-        String apiToken = null;
-        String phoneNumberId = null;
-        String templateName = WhatsAppConstants.DEFAULT_TEMPLATE_NAME;
+        String accountSid = null;
+        String authToken = null;
+        String fromNumber = null;
         String phoneAttribute = WhatsAppConstants.DEFAULT_PHONE_ATTRIBUTE;
 
         if (config != null) {
             Map<String, String> cfg = config.getConfig();
             length = Integer.parseInt(cfg.getOrDefault(WhatsAppConstants.CODE_LENGTH, String.valueOf(WhatsAppConstants.DEFAULT_LENGTH)));
             ttl = Integer.parseInt(cfg.getOrDefault(WhatsAppConstants.CODE_TTL, String.valueOf(WhatsAppConstants.DEFAULT_TTL)));
-            apiToken = cfg.get(WhatsAppConstants.API_TOKEN);
-            phoneNumberId = cfg.get(WhatsAppConstants.PHONE_NUMBER_ID);
-            templateName = cfg.getOrDefault(WhatsAppConstants.TEMPLATE_NAME, WhatsAppConstants.DEFAULT_TEMPLATE_NAME);
+            accountSid = cfg.get(WhatsAppConstants.ACCOUNT_SID);
+            authToken = cfg.get(WhatsAppConstants.AUTH_TOKEN);
+            fromNumber = cfg.get(WhatsAppConstants.FROM_NUMBER);
             phoneAttribute = cfg.getOrDefault(WhatsAppConstants.PHONE_ATTRIBUTE, WhatsAppConstants.DEFAULT_PHONE_ATTRIBUTE);
         }
 
         String code = SecretGenerator.getInstance().randomString(length, SecretGenerator.DIGITS);
-        sendWhatsAppCode(context.getUser(), code, ttl, apiToken, phoneNumberId, templateName, phoneAttribute);
+        sendWhatsAppCode(context.getUser(), code, ttl, accountSid, authToken, fromNumber, phoneAttribute);
 
         session.setAuthNote(WhatsAppConstants.CODE, code);
         session.setAuthNote(WhatsAppConstants.CODE_TTL, Long.toString(System.currentTimeMillis() + (ttl * 1000L)));
@@ -158,25 +158,24 @@ public class WhatsAppAuthenticatorForm extends AbstractUsernameFormAuthenticator
     }
 
     private void sendWhatsAppCode(UserModel user, String code, int ttl,
-                                  String apiToken, String phoneNumberId,
-                                  String templateName, String phoneAttribute) {
-
+                                  String accountSid, String authToken,
+                                  String fromNumber, String phoneAttribute) {
         String phone = user.getFirstAttribute(phoneAttribute);
         if (phone == null || phone.isBlank()) {
             log.warnf("Cannot send WhatsApp OTP: user '%s' has no '%s' attribute", user.getUsername(), phoneAttribute);
             throw new AuthenticationFlowException(AuthenticationFlowError.INVALID_USER);
         }
 
-        if (apiToken == null || phoneNumberId == null) {
-            log.error("WhatsApp authenticator is not configured: apiToken or phoneNumberId is missing");
+        if (accountSid == null || authToken == null || fromNumber == null) {
+            log.error("WhatsApp authenticator is not configured: accountSid, authToken, or fromNumber is missing");
             throw new AuthenticationFlowException(AuthenticationFlowError.INTERNAL_ERROR);
         }
 
-        WhatsAppService service = new WhatsAppService(apiToken, phoneNumberId, templateName);
+        WhatsAppService service = new WhatsAppService(accountSid, authToken, fromNumber);
         try {
             service.sendOtp(phone, code, ttl);
         } catch (IOException e) {
-            log.errorf(e, "Failed to send WhatsApp OTP to user '%s'", user.getUsername());
+            log.errorf(e, "Failed to send WhatsApp OTP via Twilio to user '%s'", user.getUsername());
             throw new AuthenticationFlowException(AuthenticationFlowError.INTERNAL_ERROR);
         }
     }
