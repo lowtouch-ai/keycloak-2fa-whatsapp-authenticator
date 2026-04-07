@@ -35,7 +35,7 @@ public class WhatsAppService {
 
         String to = "whatsapp:" + toPhone;
         String from = fromNumber.startsWith("whatsapp:") ? fromNumber : "whatsapp:" + fromNumber;
-        String messageBody = "Your lowtouch.ai verification code is *" + code + "*. "
+        String messageBody = "Your yatna.ai verification code is *" + code + "*. "
                 + "Valid for " + ttl + " seconds. Do not share this code with anyone.";
 
         String formData = "To=" + URLEncoder.encode(to, StandardCharsets.UTF_8)
