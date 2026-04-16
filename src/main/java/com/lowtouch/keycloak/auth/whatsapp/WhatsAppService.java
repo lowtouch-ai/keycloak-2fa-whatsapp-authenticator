@@ -30,17 +30,38 @@ public class WhatsAppService {
      * @param code    the OTP code to send
      * @param ttl     validity in seconds, included in the message body
      */
+    private String contentSid;
+
+    public WhatsAppService(String accountSid, String authToken, String fromNumber, String contentSid) {
+        this.accountSid = accountSid;
+        this.authToken = authToken;
+        this.fromNumber = fromNumber;
+        this.contentSid = contentSid;
+    }
+
     public void sendOtp(String toPhone, String code, int ttl) throws IOException {
         String endpoint = WhatsAppConstants.TWILIO_API_URL + "/" + accountSid + "/Messages.json";
 
         String to = "whatsapp:" + toPhone;
         String from = fromNumber.startsWith("whatsapp:") ? fromNumber : "whatsapp:" + fromNumber;
-        String messageBody = "Your yatna.ai verification code is *" + code + "*. "
-                + "Valid for " + ttl + " seconds. Do not share this code with anyone.";
 
-        String formData = "To=" + URLEncoder.encode(to, StandardCharsets.UTF_8)
-                + "&From=" + URLEncoder.encode(from, StandardCharsets.UTF_8)
-                + "&Body=" + URLEncoder.encode(messageBody, StandardCharsets.UTF_8);
+        String formData;
+        if (contentSid != null && !contentSid.isBlank()) {
+            // Use pre-approved WhatsApp template (works outside 24-hour session window)
+            int ttlMinutes = ttl / 60;
+            String contentVariables = "{\"1\":\"" + code + "\",\"2\":\"" + ttlMinutes + "\"}";
+            formData = "To=" + URLEncoder.encode(to, StandardCharsets.UTF_8)
+                    + "&From=" + URLEncoder.encode(from, StandardCharsets.UTF_8)
+                    + "&ContentSid=" + URLEncoder.encode(contentSid, StandardCharsets.UTF_8)
+                    + "&ContentVariables=" + URLEncoder.encode(contentVariables, StandardCharsets.UTF_8);
+        } else {
+            // Fallback: freeform message (only works within 24-hour session window)
+            String messageBody = "Your Yatna AI verification code is *" + code + "*. "
+                    + "Valid for " + (ttl / 60) + " minutes. Do not share this code with anyone.";
+            formData = "To=" + URLEncoder.encode(to, StandardCharsets.UTF_8)
+                    + "&From=" + URLEncoder.encode(from, StandardCharsets.UTF_8)
+                    + "&Body=" + URLEncoder.encode(messageBody, StandardCharsets.UTF_8);
+        }
 
         String credentials = Base64.getEncoder()
                 .encodeToString((accountSid + ":" + authToken).getBytes(StandardCharsets.UTF_8));

@@ -86,9 +86,10 @@ public class WhatsAppAuthenticatorForm extends AbstractUsernameFormAuthenticator
         if (envLength != null && config == null) length = Integer.parseInt(envLength);
         String envTtl = System.getenv("KC_TWILIO_CODE_TTL");
         if (envTtl != null && config == null) ttl = Integer.parseInt(envTtl);
+        String contentSid = System.getenv("KC_TWILIO_CONTENT_SID");
 
         String code = SecretGenerator.getInstance().randomString(length, SecretGenerator.DIGITS);
-        sendWhatsAppCode(context.getUser(), code, ttl, accountSid, authToken, fromNumber, phoneAttribute);
+        sendWhatsAppCode(context.getUser(), code, ttl, accountSid, authToken, fromNumber, phoneAttribute, contentSid);
 
         session.setAuthNote(WhatsAppConstants.CODE, code);
         session.setAuthNote(WhatsAppConstants.CODE_TTL, Long.toString(System.currentTimeMillis() + (ttl * 1000L)));
@@ -171,7 +172,7 @@ public class WhatsAppAuthenticatorForm extends AbstractUsernameFormAuthenticator
 
     private void sendWhatsAppCode(UserModel user, String code, int ttl,
                                   String accountSid, String authToken,
-                                  String fromNumber, String phoneAttribute) {
+                                  String fromNumber, String phoneAttribute, String contentSid) {
         String phone = user.getFirstAttribute(phoneAttribute);
         if (phone == null || phone.isBlank()) {
             log.warnf("Cannot send WhatsApp OTP: user '%s' has no '%s' attribute", user.getUsername(), phoneAttribute);
@@ -183,7 +184,7 @@ public class WhatsAppAuthenticatorForm extends AbstractUsernameFormAuthenticator
             throw new AuthenticationFlowException(AuthenticationFlowError.INTERNAL_ERROR);
         }
 
-        WhatsAppService service = new WhatsAppService(accountSid, authToken, fromNumber);
+        WhatsAppService service = new WhatsAppService(accountSid, authToken, fromNumber, contentSid);
         try {
             service.sendOtp(phone, code, ttl);
         } catch (IOException e) {
